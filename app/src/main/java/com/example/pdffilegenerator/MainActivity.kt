@@ -3,16 +3,14 @@ package com.example.pdffilegenerator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.*
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.os.Build
-import android.os.Build.VERSION_CODES.R
 import android.os.Bundle
 import android.os.Environment
 import android.widget.Toast
@@ -21,13 +19,6 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.Typeface
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,10 +40,26 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.pdffilegenerator.ui.theme.PdfFileGeneratorTheme
-import com.example.pdffilegenerator.ui.theme.*
-import com.example.pdffilegenerator.ui.theme.greenColor
+import com.example.pdffilegenerator.ui.theme.Red
+import androidx.compose.runtime.*
+import androidx.core.content.FileProvider
+import androidx.core.view.get
+import com.itextpdf.text.Document
+import com.itextpdf.text.Image
+import com.itextpdf.text.Paragraph
+import com.itextpdf.text.pdf.PdfWriter
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.*
+
+
+import android.Manifest
+import android.content.Intent
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.TextField
+import androidx.compose.ui.text.input.TextFieldValue
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -70,8 +76,9 @@ class MainActivity : ComponentActivity() {
                     Scaffold(
                         topBar = {
                             TopAppBar(
-                                modifier = Modifier.fillMaxSize()
-                                .background(Color.Red),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Red),
 
                                 title = {
                                     Text(
@@ -105,7 +112,7 @@ class MainActivity : ComponentActivity() {
             if (grantResults.size > 0) {
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                     Toast.makeText(this, "Permission Granted..", Toast.LENGTH_SHORT).show()
-
+                    finish()
                 } else {
                     Toast.makeText(this, "Permission Denied..", Toast.LENGTH_SHORT).show()
                     finish()
@@ -115,11 +122,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun pdfGenerator() {
+    var userTextInput by remember { mutableStateOf(TextFieldValue()) }
+
+    println("Generator")
 
     val ctx = LocalContext.current
-    val activity = (LocalContext.current as? Activity)
+    val activity = (LocalContext.current as? ComponentActivity)
     if (checkPermissions(ctx)) {
         Toast.makeText(ctx, "Permissions Granted..", Toast.LENGTH_SHORT).show()
     } else {
@@ -136,24 +147,71 @@ fun pdfGenerator() {
     ) {
         Text(
             text = "PDF Generator",
-            color = Red,
+            color = Color.Red,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             fontSize = 20.sp
         )
 
-        Spacer(modifier = Modifier.height(60.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // User-input text field
+        TextField(
+            value = userTextInput,
+            onValueChange = { userTextInput = it },
+            modifier = Modifier.fillMaxWidth().fillMaxHeight(fraction = .6f),
+            textStyle = LocalTextStyle.current.copy(fontSize = 16.sp),
+            placeholder = { Text(text = "Enter text") },
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
         Button(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
             onClick = {
-                generatePDF(ctx)
-            }) {
+                val pdfFile = createPdf(userTextInput.text, ctx)
+                if (pdfFile != null) {
+                    Toast.makeText(ctx, "PDF file generated.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(ctx, "Failed to generate PDF file.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        ) {
             Text(modifier = Modifier.padding(6.dp), text = "Generate PDF")
         }
     }
+}
 
+@RequiresApi(Build.VERSION_CODES.KITKAT)
+fun createPdf(userText: String, context: Context) {
+
+    val document = Document()
+    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    val pdfFileName = "PDF_$timestamp.pdf"
+
+    // Use context to get the external files directory
+    val externalFilesDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+
+    val pdfFile = File(externalFilesDir, pdfFileName)
+
+    val writer = PdfWriter.getInstance(document, FileOutputStream(pdfFile))
+    document.open()
+
+    // Adding user-input text to the PDF
+    val paragraph = Paragraph(userText)
+    document.add(paragraph)
+
+    document.close()
+    writer.close()
+
+    // Open the file location using an Intent
+    val pdfUri = FileProvider.getUriForFile(context, context.packageName + ".provider", pdfFile)
+    val openPdfIntent = Intent(Intent.ACTION_VIEW)
+    openPdfIntent.flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+    openPdfIntent.setDataAndType(pdfUri, "application/pdf")
+
+    context.startActivity(openPdfIntent)
 }
 
 @RequiresApi(Build.VERSION_CODES.KITKAT)
@@ -183,12 +241,13 @@ fun generatePDF(context: Context) {
     title.textAlign = Paint.Align.CENTER
     canvas.drawText("This is sample document which we have created.", 396F, 560F, title)
     pdfDocument.finishPage(myPage)
-    val file: File = File(Environment.getExternalStorageDirectory(), "GFG.pdf")
+    val file: File = File(Environment.getExternalStorageDirectory(), "candle.pdf")
 
     try {
         pdfDocument.writeTo(FileOutputStream(file))
         Toast.makeText(context, "PDF file generated..", Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
+        println(e.message)
         e.printStackTrace()
         Toast.makeText(context, "Fail to generate PDF file..", Toast.LENGTH_SHORT)
             .show()
