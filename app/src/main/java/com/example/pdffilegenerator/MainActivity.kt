@@ -97,10 +97,10 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+
         }
     }
 
-    //Greeting("Android")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -130,12 +130,12 @@ fun pdfGenerator() {
     println("Generator")
 
     val ctx = LocalContext.current
-    val activity = (LocalContext.current as? ComponentActivity)
-    if (checkPermissions(ctx)) {
-        Toast.makeText(ctx, "Permissions Granted..", Toast.LENGTH_SHORT).show()
-    } else {
-        requestPermission(activity!!)
-    }
+//    val activity = (LocalContext.current as? ComponentActivity)
+//    if (checkPermissions(ctx)) {
+//        Toast.makeText(ctx, "Permissions Granted..", Toast.LENGTH_SHORT).show()
+//    } else {
+//        requestPermission(activity!!)
+//    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -255,27 +255,27 @@ fun generatePDF(context: Context) {
     pdfDocument.close()
 }
 
-fun checkPermissions(context: Context): Boolean {
-    var writeStoragePermission = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
-    )
-    var readStoragePermission = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    )
-    return writeStoragePermission == PackageManager.PERMISSION_GRANTED && readStoragePermission == PackageManager.PERMISSION_GRANTED
-}
-fun requestPermission(activity: Activity) {
-    ActivityCompat.requestPermissions(
-        activity,
-        arrayOf(
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ), 101
-
-    )
-}
+//fun checkPermissions(context: Context): Boolean {
+//    var writeStoragePermission = ContextCompat.checkSelfPermission(
+//        context,
+//        Manifest.permission.WRITE_EXTERNAL_STORAGE
+//    )
+//    var readStoragePermission = ContextCompat.checkSelfPermission(
+//        context,
+//        Manifest.permission.READ_EXTERNAL_STORAGE
+//    )
+//    return writeStoragePermission == PackageManager.PERMISSION_GRANTED && readStoragePermission == PackageManager.PERMISSION_GRANTED
+//}
+//fun requestPermission(activity: Activity) {
+//    ActivityCompat.requestPermissions(
+//        activity,
+//        arrayOf(
+//            Manifest.permission.READ_EXTERNAL_STORAGE,
+//            Manifest.permission.WRITE_EXTERNAL_STORAGE
+//        ), 101
+//
+//    )
+//}
 
 @Preview(showBackground = true)
 @Composable
